@@ -222,7 +222,7 @@ class scalar_voxelfile_base(voxelfile_base):
         return int(di.get(last).get('count')) * self.size ** self.dim
         
     def finalize(self):
-        di = D.get(id).get('dict')
+        di = D.get(self.id).get('dict')
         return jsonify({self.name: self.get_result(di)})
         
 class gross_floor_area(scalar_voxelfile_base):
