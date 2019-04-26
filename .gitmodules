@@ -1,0 +1,3 @@
+[submodule "voxel"]
+	path = voxel
+	url = https://github.com/opensourceBIM/voxel
