@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Progress</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='main.css') }}">
+<body>
+
+<div id='progress'>
+</div>
+
+<script>
+
+function req(url, method) {
+    method = method || "GET";
+    return new Promise(function(resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && xhr.status == 200) {
+                resolve(JSON.parse(xhr.responseText));
+            }
+        };
+        xhr.open(method, url, true);
+        xhr.send();
+    });
+}
+
+var d = document.getElementById('progress');
+
+let context = {{ context_id|tojson }};
+
+function upd() {
+    req("/progress/" + context).then(function(p) {
+        if (p && p.lines) {
+        d.innerHTML = "";
+        N = 0;
+        for (let l of p.lines) {
+            let r = l.lastIndexOf("\r");
+            if (r !== -1) {
+                l = l.substr(r + 1);
+            }
+            if (l.charAt(0) == '>') {
+                d.innerHTML += l + " <a href='/2d/{{ context_id }}/" + N  + "'>[2d]</a>  <a href='/3d/{{ context_id }}/" + N + "'>[3d]</a><br />";
+                N += 1;
+            } else {
+                d.innerHTML += l + "<br />"
+            }
+        }
+        }
+        setTimeout(upd, 1000);
+    });
+}
+
+upd();
+
+</script>
+
+</body>
+</html>

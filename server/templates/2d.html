@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Voxel 2d : {{orientation}} = 0</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='main.css') }}">
+<body>
+
+<img src="/slice/{{context}}/{{num}}/{{orientation}}/0" id="img">
+
+<script>
+let cats = ["final", "0", "1", "2"];
+let catid = 0;
+let img = document.getElementById("img");
+let n = 0;
+
+let chunks = {{ chunks }};
+let chunksize = {{ chunksize }};
+let maxn = chunks[2] * chunksize;
+
+document.onkeypress = function(evt) {
+    let d = 1;
+    if (evt.shiftKey) {
+        d *= 10;
+    }
+    if (evt.key.toLowerCase() === "q") {
+        n -= d;        
+    } else if (evt.key.toLowerCase() === "w") {
+        n += d;
+    } else if (evt.key.toLowerCase() === "e") {
+        if (evt.shiftKey) {
+            catid -= 1;
+        } else {
+            catid += 1;
+        }
+        catid = catid % cats.length;
+    }
+    if (n < 0) { n = 0; }
+    if (n >= maxn) { n = maxn - 1; }
+    
+    img.src = "/slice/{{context}}/{{num}}/{{orientation}}/" + n;
+    document.title = "Voxel 2d : {{orientation}} = " + n;
+    
+    evt.preventDefault();
+    evt.stopPropagation();
+    
+    return false;
+};
+</script>
+</body>
+</html>

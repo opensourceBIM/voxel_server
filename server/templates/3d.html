@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Voxel viewer</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='main.css') }}">
+    <script src="{{ url_for('static', filename='lib/xeogl.js') }}"></script>
+
+<body>
+
+<canvas id="canvas" ></canvas>
+
+<script>
+
+    var chunks = {{ chunks }};
+    var chunksize = {{ chunksize }};
+
+    var scene = new xeogl.Scene({
+        canvas: "canvas",
+        transparent: true
+    });
+    
+    xeogl.setDefaultScene(scene);
+    
+    let X = xeogl.math.vec4([1,0,0,0]);
+    let Y = xeogl.math.vec4([0,1,0,0]);
+    let Z = xeogl.math.vec4([0,0,1,0]);
+    let W = xeogl.math.vec4([0,0,0,1]);
+    
+    let orientations = {
+        "z": xeogl.math.identityMat4(),
+        "x": xeogl.math.mat4()
+    }
+    
+    orientations["x"].set(Z, 0);
+    orientations["x"].set(X, 4);
+    orientations["x"].set(Y, 8);
+    orientations["x"].set(W,12);
+    
+    for (let or of ["z", "x"]) {
+        let dim = "xyz".indexOf(or);
+        let sz = Array.from(chunks);
+        sz.splice(dim, 1);
+        console.log(`${or}=${parseInt(chunks[dim] * chunksize / 2)}`);
+        let mesh = new xeogl.Mesh({
+            geometry: new xeogl.PlaneGeometry({
+                primitive: "triangles",
+                xSize: sz[0],
+                zSize: sz[1],
+            }),
+            material: new xeogl.PhongMaterial({
+                diffuse: [0,0,0],
+                specular: [0,0,0],
+                alpha: 1.0,
+                alphaMap: {
+                    src: `/slice/{{context}}/{{num}}/${or}/${parseInt(chunks[dim] * chunksize / 2)}`,
+                    minFilter: "nearestMipmapNearest",
+                    magFiler: "nearest",
+                    wrapS: "clampToEdge",
+                    wrapT: "clampToEdge",
+                    flipY: or === "x"
+                },
+                alphaMode: "blend",
+                backfaces: true
+            }),
+            matrix: orientations[or],
+            transparent: true
+        });
+        
+        mesh.orientation = or;
+    }
+    
+    var camera = scene.camera;
+    camera.projection = "ortho";
+    camera.eye = [4,4,4];
+    camera.ortho.scale = Math.max.apply(null, chunks);
+    
+    var cameraControl = new xeogl.CameraControl({});
+
+    var selected = null;
+    var down = false;
+    var mousePos = xeogl.math.vec2();
+    
+    scene.input.on("mousedown", (coords) => { 
+        down = true;
+        mousePos.set(coords);
+    });    
+    
+    scene.input.on("mouseup", () => {
+        down = false;
+        if (selected) {
+            let dim = "xzy".indexOf(selected.orientation);
+            let dim2 = "xyz".indexOf(selected.orientation);
+            let middle = chunks[dim2] * chunksize / 2;
+            let offset = selected.position[dim] * chunksize;
+            if (selected.orientation === "x") {
+                offset *= -1;
+            }
+            offset = parseInt(middle + offset);
+            console.log(`${selected.orientation}=${offset}`);
+            if (offset >= 0 && offset < chunks[dim2] * chunksize) {
+                selected.material.alphaMap.src = `/slice/{{context}}/{{num}}/${selected.orientation}/${offset}`;
+                console.log(selected.material.alphaMap.src);
+            }
+        }
+    });
+    
+    var tmp = xeogl.math.mat4();
+    
+    scene.input.on("mousemove", function (coords) {
+        if (!down) {
+            var hit = scene.pick({
+                canvasPos: coords
+            });
+            if (hit) {
+                selected = hit.mesh;
+            } else {
+                selected = null;
+            }
+            cameraControl.active = selected === null;
+        } else if (selected) {
+            tmp.set(selected.matrix.subarray(4, 4 + 3));
+            tmp[3] = 0.;
+            xeogl.math.mulMat4v4(scene.camera.viewNormalMatrix, tmp, tmp);
+            xeogl.math.normalizeVec2(tmp);
+            xeogl.math.subVec2(coords, mousePos, mousePos);
+            mousePos[1] *= -1.;
+            let d = xeogl.math.dotVec2(mousePos, tmp);
+            tmp.set(selected.matrix.subarray(4, 4 + 3));
+            xeogl.math.mulVec3Scalar(tmp, d / 200.);
+            xeogl.math.addVec3(tmp, selected.position);
+            selected.position = tmp.subarray(0, 3);
+            mousePos.set(coords);
+        }
+    });
+    
+</script>
+</body>
+</html>
