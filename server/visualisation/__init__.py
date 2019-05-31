@@ -32,7 +32,13 @@ class image_builder(object):
         self.bg = color
         
     def add(self, arr, axis, offset, color):
-        colors = numpy.array([self.bg, color], dtype=numpy.uint16)
+        colors = numpy.array([self.bg, color[0:3]], dtype=numpy.uint16)
+
+        try:
+            alpha = numpy.float64(color[3]) / 255.
+        except:
+            alpha = None
+
         
         key = [slice(None)] * 3
         key[axis] = offset
@@ -46,7 +52,10 @@ class image_builder(object):
             self.a = a
             # self.mask = mask
         else:
-            self.a[d > 0, :] = a[d > 0, :]
+            if alpha is None:
+                self.a[d > 0, :] = a[d > 0, :]
+            else:
+                self.a[d > 0, :] = numpy.float64(self.a[d > 0, :]) * (1. - alpha) + numpy.float64(a[d > 0, :]) * alpha
             # self.a[~mask] = a[~mask]
             # self.mask[mask] = False
             
