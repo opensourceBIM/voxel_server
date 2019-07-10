@@ -189,6 +189,7 @@ class voxelfile_base(View):
     args = {}
     oncomplete = IDENTITY
     
+    @cross_origin()
     def dispatch_request(self):
         if request.method == 'POST':
             self.id = id = "".join(choice(string.ascii_letters) for i in range(32))
@@ -269,7 +270,7 @@ volume = volume2(voxels)
         
 class safety_barriers(voxelfile_base):
     asynch = True    
-    name = "volume"
+    name = "safety_barriers"
     args = {"mesh": True}
     command = """file = parse("input.ifc")
 surfaces = create_geometry(file, exclude={"IfcOpeningElement", "IfcDoor", "IfcSpace"})
