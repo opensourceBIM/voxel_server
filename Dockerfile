@@ -1,10 +1,10 @@
 FROM ubuntu:16.04 as ifcopenshell
 
 WORKDIR /
-RUN apt-get -y update && apt-get -y install autoconf bison build-essential git make wget python bzip2 libfreetype6-dev mesa-common-dev libgl1-mesa-dev python-pip libftgl-dev cmake unzip
-RUN git clone https://github.com/IfcOpenShell/IfcOpenShell.git && cd IfcOpenShell/nix
+RUN apt-get -y update && apt-get -y install autoconf bison build-essential git make wget python bzip2 libfreetype6-dev mesa-common-dev libgl1-mesa-dev python-pip libftgl-dev cmake unzip libffi-dev
+RUN git clone https://github.com/IfcOpenShell/IfcOpenShell.git && cd IfcOpenShell && git checkout v0.6.0
 WORKDIR /IfcOpenShell/nix
-RUN CXXFLAGS="-O3 -march=native" BUILD_CFG=Release python build-all.py
+RUN CXXFLAGS="-O3 -march=native" BUILD_CFG=Release python build-all.py IfcGeom
 
 # Install boost::filesystem
 WORKDIR /IfcOpenShell/build/Linux/x86_64/build/boost_1_59_0
