@@ -300,10 +300,14 @@ result = intersect(really_reachable, deadly)
 
     def oncomplete(self):
         import prepared_buffer
+        import annotation_data
         d = os.path.join(tempfile.gettempdir(), self.id)
+        ifc = os.path.join(d, "input.ifc")
         ifn = os.path.join(d, "23.obj")
-        ofn = os.path.join(d, "buffer.bin")
-        prepared_buffer.create(ifn, ofn)
+        ofn1 = os.path.join(d, "buffer.bin")
+        ofn2 = os.path.join(d, "data.json")
+        prepared_buffer.create(ifn, ofn1)
+        annotation_data.create(ifc, ifn, ofn2)
 
     def finalize(self):
         return jsonify({"id": self.id})
