@@ -323,7 +323,7 @@ def get_safetybarriers_annotation(id):
 
 @application.route('/safetybarriers/<id>/metadata')
 @cross_origin()
-def get_safetybarriers_annotation(id):
+def get_safetybarriers_meta(id):
     assert not (set(id) - set(string.ascii_letters))
     fn = os.path.join(tempfile.gettempdir(), id, "data.json")
     if not os.path.exists(fn):
