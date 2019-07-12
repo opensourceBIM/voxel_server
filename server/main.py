@@ -321,6 +321,15 @@ def get_safetybarriers_annotation(id):
         abort(404)
     return send_file(fn, mimetype="application/octet-stream")
 
+@application.route('/safetybarriers/<id>/metadata')
+@cross_origin()
+def get_safetybarriers_annotation(id):
+    assert not (set(id) - set(string.ascii_letters))
+    fn = os.path.join(tempfile.gettempdir(), id, "data.json")
+    if not os.path.exists(fn):
+        abort(404)
+    return send_file(fn)
+
 @application.route('/safetybarriers/<id>/progress')
 @cross_origin()
 def get_safetybarriers_progress(id):
