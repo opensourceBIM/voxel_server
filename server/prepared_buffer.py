@@ -1,13 +1,25 @@
 import numpy
 
-def create(ifn, ofn):
+def signNotZero(f):
+    return 1 if f >= 0. else -1
 
+def normalToOct(normal):
+    x = sum(numpy.abs(normal))
+    p = normal[0:2] / x
+    if normal[2] <= 0.:
+        a = (1. - numpy.abs(p[0])) * signNotZero(p[0])
+        b = (1. - numpy.abs(p[1])) * signNotZero(p[1])
+        p[:] = a, b
+    return numpy.int8(p * 127.)
+
+def create(ifn, ofn):
     indices, vertices, offsets = [], [], []
 
     for l in open(ifn):
         args = l.strip().split(" ")
         a = args[0]
         bs = args[1:]
+
         if a == "v":
             vertices.extend(map(float, bs))
         elif a == "f":
@@ -34,6 +46,7 @@ def create(ifn, ofn):
 
     nrObjects      : int
     nrIndices      : int
+    (nrLineIndices): 0
     positionsIndex : int
     normalsIndex   : int
     colorsIndex    : int
@@ -42,6 +55,7 @@ def create(ifn, ofn):
 
     nrObjects      : int
     totalNrIndices : int
+    (nrLineIndices): 0
     positionsIndex : int
     normalsIndex   : int
     colorsIndex    : int
@@ -51,7 +65,9 @@ def create(ifn, ofn):
     objects : array<struct, nrObjects>
         oid           : long
         startIndex    : int
+        (startLI)     : 0
         nrIndices     : int
+        (nrLI)        : 0
         nrVertices    : int
         minIndex      : int
         maxIndex      : int
@@ -68,9 +84,10 @@ def create(ifn, ofn):
     """
 
     with open(ofn, "wb") as f:
-        numpy.array([len(offsets), indices_np.size, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
-        numpy.array([0], dtype=numpy.int32).tofile(f)
-        numpy.array([len(offsets), indices_np.size, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
+        numpy.array([len(offsets), indices_np.size, 0, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
+        # alignment not necessary anymore
+        # numpy.array([0], dtype=numpy.int32).tofile(f)
+        numpy.array([len(offsets), indices_np.size, 0, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
         indices_np.tofile(f)
         for i, (off, voff) in enumerate(offsets):
             numpy.array([0xffff + i], dtype=numpy.int64).tofile(f)
@@ -81,7 +98,7 @@ def create(ifn, ofn):
                 vnext = vertices_np.size
             off //= 3
             next //= 3
-            numpy.array([off, next - off, vnext - voff, indices_np[off:next].min(), indices_np[off:next].max()], dtype=numpy.int32).tofile(f)
+            numpy.array([off, 0, next - off, 0, vnext - voff, indices_np[off:next].min(), indices_np[off:next].max()], dtype=numpy.int32).tofile(f)
             numpy.array([0.], dtype=numpy.float32).tofile(f)
             numpy.array([1, (vnext - voff) // 3 * 4, 0xff0000ff], dtype=numpy.uint32).tofile(f)
         
@@ -90,6 +107,6 @@ def create(ifn, ofn):
         
         # Viewer expect millimeters
         (vertices_np * 1000.).tofile(f)
-        
-        numpy.int8(normals * 128).tofile(f)
-            
+
+        for n in normals.reshape((-1, 3)):
+            normalToOct(n).tofile(f)
