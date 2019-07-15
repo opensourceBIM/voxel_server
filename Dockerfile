@@ -37,6 +37,8 @@ RUN make install
 
 RUN python -m pip install flask flask-cors numpy Pillow gunicorn
 
+ADD https://s3.amazonaws.com/ifcopenshell-builds/ifcopenshell-python-27u-v0.6.0-b4ce5be-linux64.zip /tmp/ifcopenshell.zip
+RUN unzip /tmp/ifcopenshell.zip -d /usr/lib/python2.7/dist-packages
 ADD server /voxels/server/
 WORKDIR /voxels/server
 
