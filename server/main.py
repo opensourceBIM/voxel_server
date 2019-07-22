@@ -311,24 +311,72 @@ result = intersect(really_reachable, deadly)
 
     def finalize(self):
         return jsonify({"id": self.id})
+
+
+class evacuationroutes(voxelfile_base):
+    asynch = True    
+    name = "evacuation_routes"
+    args = {"mesh": True}
+    command = """file = parse("input.ifc")
+surfaces = create_geometry(file, exclude={"IfcOpeningElement", "IfcDoor", "IfcSpace"})
+slabs = create_geometry(file, include={"IfcSlab"})
+doors = create_geometry(file, include={"IfcDoor"})
+surface_voxels = voxelize(surfaces)
+slab_voxels = voxelize(slabs)
+door_voxels = voxelize(doors)
+walkable = shift(slab_voxels, dx=0, dy=0, dz=1)
+walkable_minus = subtract(walkable, slab_voxels)
+walkable_seed = intersect(door_voxels, walkable_minus)
+surfaces_sweep = sweep(surface_voxels, dx=0, dy=0, dz=0.5)
+surfaces_padded = offset_xy(surface_voxels, 0.1)
+surfaces_obstacle = sweep(surfaces_padded, dx=0, dy=0, dz=-0.5)
+walkable_region = subtract(surfaces_sweep, surfaces_obstacle)
+walkable_seed_real = subtract(walkable_seed, surfaces_padded)
+reachable = traverse(walkable_region, walkable_seed_real)
+reachable_shifted = shift(reachable, dx=0, dy=0, dz=1)
+reachable_bottom = subtract(reachable, reachable_shifted)
+all_surfaces = create_geometry(file)
+voxels = voxelize(all_surfaces)
+external = exterior(voxels)
+seed = intersect(walkable_region, external)
+safe = traverse(walkable_region, seed, 9.0)
+safe_bottom = intersect(safe, reachable_bottom)
+unsafe = subtract(reachable_bottom, safe)
+"""
+
+    def oncomplete(self):
+        import prepared_buffer
+        import annotation_data
+        d = os.path.join(tempfile.gettempdir(), self.id)
+        ifc = os.path.join(d, "input.ifc")
+        ifn = os.path.join(d, "24.obj")
+        ofn1 = os.path.join(d, "buffer.bin")
+        ofn2 = os.path.join(d, "data.json")
+        prepared_buffer.create(ifn, ofn1)
+        annotation_data.create(ifc, ifn, ofn2)
+
+    def finalize(self):
+        return jsonify({"id": self.id})
         
-@application.route('/safetybarriers/<id>/annotation')
+        
+@application.route('/<check_type>/<id>/<part>')
 @cross_origin()
-def get_safetybarriers_annotation(id):
-    assert not (set(id) - set(string.ascii_letters))
-    fn = os.path.join(tempfile.gettempdir(), id, "buffer.bin")
+def get_file(check_type, id, part):
+    if len(set(id) - set(string.ascii_letters)) != 0:
+        abort(404)
+    if check_type not in {"safetybarriers", "evacuationroutes"}:
+        abort(404)
+    p = {
+        "annotation": "buffer.bin",
+        "metadata": "data.json"
+    }.get(part)
+    if p is None:
+        abort(404)
+    fn = os.path.join(tempfile.gettempdir(), id, p)
     if not os.path.exists(fn):
         abort(404)
     return send_file(fn, mimetype="application/octet-stream")
 
-@application.route('/safetybarriers/<id>/metadata')
-@cross_origin()
-def get_safetybarriers_meta(id):
-    assert not (set(id) - set(string.ascii_letters))
-    fn = os.path.join(tempfile.gettempdir(), id, "data.json")
-    if not os.path.exists(fn):
-        abort(404)
-    return send_file(fn)
 
 @application.route('/safetybarriers/<id>/progress')
 @cross_origin()
@@ -338,12 +386,16 @@ def get_safetybarriers_progress(id):
     progress = 0
     for p in os.listdir(d):
         if p.endswith(".vox.contents"): progress += 5
-    return jsonify({"progress": progress})        
+    return jsonify({"progress": progress})
+    
+    
+# TODO: progress for evacuationroutes
     
 application.add_url_rule('/gross_floor_area', methods=['GET', 'POST'], view_func=gross_floor_area.as_view('gross_floor_area'))
 application.add_url_rule('/outer_surface_area', methods=['GET', 'POST'], view_func=outer_surface_area.as_view('outer_surface_area'))
 application.add_url_rule('/volume', methods=['GET', 'POST'], view_func=volume.as_view('volume'))
 application.add_url_rule('/safetybarriers/create', methods=['GET', 'POST'], view_func=safety_barriers.as_view('safety_barriers'))
+application.add_url_rule('/evacuationroutes/create', methods=['GET', 'POST'], view_func=evacuationroutes.as_view('evacuationroutes'))
 
 @application.route('/progress/<id>', methods=['GET'])
 def get_progress(id):
