@@ -351,7 +351,7 @@ unsafe = subtract(reachable_bottom, safe)
         import annotation_data
         d = os.path.join(tempfile.gettempdir(), self.id)
         ifc = os.path.join(d, "input.ifc")
-        ifn = os.path.join(d, "24.obj")
+        ifn = os.path.join(d, "26.obj")
         ofn1 = os.path.join(d, "buffer.bin")
         ofn2 = os.path.join(d, "data.json")
         prepared_buffer.create(ifn, ofn1)
