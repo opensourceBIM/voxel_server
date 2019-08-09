@@ -187,6 +187,7 @@ class voxelfile_base(View):
     
     size = 0.05
     args = {}
+    onbegin = IDENTITY
     oncomplete = IDENTITY
     
     @cross_origin()
@@ -205,6 +206,8 @@ class voxelfile_base(View):
             args = {"size": self.size}
             args.update(self.args)
             
+            self.onbegin()
+            
             dispatch_or_run(self.asynch, d, id, self.oncomplete, args)
             
             return self.finalize()
@@ -219,6 +222,13 @@ class scalar_voxelfile_base(voxelfile_base):
     asynch = False
     
     def get_result(self, di):
+        if len(di) == 0:
+            # The dictionary is empty when geometry generation
+            # failed. In which case, likely the entity types in
+            # question were not found. Perhaps we need to handle
+            # this differently in subtypes, for now just return
+            # zero.
+            return 0.
         last = sorted(map(int, di.keys()))[-1]
         return int(di.get(last).get('count')) * self.size ** self.dim
         
