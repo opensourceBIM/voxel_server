@@ -42,4 +42,4 @@ RUN unzip /tmp/ifcopenshell.zip -d /usr/lib/python2.7/dist-packages
 ADD server /voxels/server/
 WORKDIR /voxels/server
 
-ENTRYPOINT gunicorn --bind 0.0.0.0:5000 wsgi
+ENTRYPOINT gunicorn --bind 0.0.0.0:5000 --timeout 3600 wsgi
