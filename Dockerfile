@@ -35,7 +35,10 @@ RUN wget -O schependom.ifc "https://github.com/openBIMstandards/DataSetSchependo
 RUN make test
 RUN make install
 
-RUN python -m pip install flask flask-cors numpy Pillow gunicorn
+# pip needs to install numpy first
+# https://github.com/pypa/pip/issues/6667#issuecomment-507164431
+RUN python -m pip install numpy==1.16
+RUN python -m pip install flask flask-cors Pillow gunicorn
 
 ADD https://s3.amazonaws.com/ifcopenshell-builds/ifcopenshell-python-27u-v0.6.0-b4ce5be-linux64.zip /tmp/ifcopenshell.zip
 RUN unzip /tmp/ifcopenshell.zip -d /usr/lib/python2.7/dist-packages
