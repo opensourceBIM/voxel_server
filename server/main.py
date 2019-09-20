@@ -370,6 +370,49 @@ unsafe = subtract(reachable_bottom, safe)
     def finalize(self):
         return jsonify({"id": self.id})
         
+
+class accessibility(voxelfile_base):
+    asynch = True    
+    name = "evacuation_routes"
+    args = {"mesh": True}
+    command = """file = parse("input.ifc")
+surfaces = create_geometry(file, exclude={"IfcOpeningElement", "IfcDoor", "IfcSpace"})
+slabs = create_geometry(file, include={"IfcSlab"})
+doors = create_geometry(file, include={"IfcDoor"})
+surface_voxels = voxelize(surfaces)
+slab_voxels = voxelize(slabs)
+door_voxels = voxelize(doors)
+walkable = shift(slab_voxels, dx=0, dy=0, dz=1)
+walkable_minus = subtract(walkable, slab_voxels)
+walkable_seed = intersect(door_voxels, walkable_minus)
+surfaces_sweep = sweep(surface_voxels, dx=0, dy=0, dz=2)
+surfaces_padded = offset_xy(surface_voxels, 0.1)
+surfaces_obstacle = sweep(surfaces_padded, dx=0, dy=0, dz=-0.5)
+walkable_region = subtract(surfaces_sweep, surfaces_obstacle)
+walkable_seed_real = subtract(walkable_seed, surfaces_padded)
+reachable = traverse(walkable_region, walkable_seed_real)
+reachable_below = shift(slab_voxels, dx=0, dy=0, dz=-1)
+void = dump_surfaces(reachable_below, surfaces, "surfaces")
+"""
+
+    def onbegin(self):
+        # Create an empty directory for the dump_surfaces() call 
+        os.makedirs(os.path.join(tempfile.gettempdir(), self.id, "surfaces"))
+
+    def oncomplete(self):
+        import prepared_buffer
+        import get_surfaces
+        d = os.path.join(tempfile.gettempdir(), self.id)
+        ifc = os.path.join(d, "input.ifc")
+        surfaces = os.path.join(d, "surfaces")
+        ofn1 = os.path.join(d, "buffer.bin")
+        
+        get_surfaces.get_surfaces(surfaces, ifc)
+        prepared_buffer.create(ifn, ofn1)
+
+    def finalize(self):
+        return jsonify({"id": self.id})
+        
         
 @application.route('/<check_type>/<id>/<part>')
 @cross_origin()
