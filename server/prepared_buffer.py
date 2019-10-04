@@ -18,7 +18,7 @@ def normalToOct(normal):
 def create(*args):
     if len(args) == 2:
         ifn, ofn = args
-        input_pairs = [[ifc, 0xff0000ff]]
+        input_pairs = [[ifn, 0xff0000ff]]
     else:
         ofn = args[0]
         rest = args[1:]
