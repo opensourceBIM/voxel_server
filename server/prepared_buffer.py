@@ -142,12 +142,12 @@ def create(*args):
                 vertices_np_total = numpy.vstack((vertices_np_total, vertices_np))
                 normals_np_total = numpy.vstack((normals_np_total, normals))
                 
-        print([len(offsets), indices_np.size, line_indices_np.size, vertices_np.size, normals.size, 0])
+        print([len(offsets), indices_np_total.size, line_indices_np_total.size, vertices_np_total.size, normals_np_total.size, 0])
         
-        numpy.array([len(offsets), indices_np.size, line_indices_np.size, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
+        numpy.array([len(offsets), indices_np_total.size, line_indices_np_total.size, vertices_np_total.size, normals_np_total.size, 0], dtype=numpy.int32).tofile(f)
         # alignment not necessary anymore
         # numpy.array([0], dtype=numpy.int32).tofile(f)
-        numpy.array([len(offsets), indices_np.size, line_indices_np.size, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)        
+        numpy.array([len(offsets), indices_np_total.size, line_indices_np_total.size, vertices_np_total.size, normals_np_total.size, 0], dtype=numpy.int32).tofile(f)        
         
         print("indices @", f.tell())
         
@@ -183,7 +183,7 @@ def create(*args):
         # for n in normals.reshape((-1, 3)):
         #     normalToOct(n).tofile(f)
         
-        numpy.int8(normals * 128).tofile(f)
+        numpy.int8(normals_np_total * 128).tofile(f)
 
 if __name__ == "__main__":
     import sys
