@@ -35,9 +35,11 @@ class ColorConverter(BaseConverter):
     def to_url(values):
         return ''.join(map(lambda i: hex(i)[0:2], values))
         
-def get_voxelfile(id, num):
-    assert not (set(id) - set(string.ascii_letters))
-    db = os.path.join(tempfile.gettempdir(), id, "%d.vox" % int(num))
+def get_voxelfile(id, num):    
+    # assert not (set(id) - set(string.ascii_letters))
+    # db = os.path.join(tempfile.gettempdir(), id, "%d.vox" % int(num))
+    # db = r"C:\Users\tkrij\Documents\IfcOpenShell\files\nibs\%d.vox" % int(num)
+    db = r"C:\Users\tkrij\Documents\AECgeeks\projects\presentations\tue-20190911\outer\%s.vox" % num
     return voxel_storage.load(db)
 
 application.url_map.converters['color'] = ColorConverter
@@ -328,12 +330,15 @@ class evacuationroutes(voxelfile_base):
     name = "evacuation_routes"
     args = {"mesh": True}
     command = """file = parse("input.ifc")
+fire_door_filter = filter_attributes(file, OverallWidth=">1.2")
 surfaces = create_geometry(file, exclude={"IfcOpeningElement", "IfcDoor", "IfcSpace"})
 slabs = create_geometry(file, include={"IfcSlab"})
 doors = create_geometry(file, include={"IfcDoor"})
+fire_doors = create_geometry(fire_door_filter, include={"IfcDoor"})
 surface_voxels = voxelize(surfaces)
 slab_voxels = voxelize(slabs)
 door_voxels = voxelize(doors)
+fire_door_voxels = voxelize(fire_doors)
 walkable = shift(slab_voxels, dx=0, dy=0, dz=1)
 walkable_minus = subtract(walkable, slab_voxels)
 walkable_seed = intersect(door_voxels, walkable_minus)
@@ -350,10 +355,15 @@ voxels = voxelize(all_surfaces)
 external = exterior(voxels)
 walkable_region_offset = offset_xy(walkable_region, 1)
 walkable_region_incl = union(walkable_region, walkable_region_offset)
-seed = intersect(walkable_region_incl, external)
-safe = traverse(walkable_region_incl, seed, 9.0, connectedness=26)
+seed_external = intersect(walkable_region_incl, external)
+seed_fire_doors = intersect(walkable_region_incl, fire_door_voxels)
+seed = union(seed_external, seed_fire_doors)
+safe = traverse(walkable_region_incl, seed, 30.0, connectedness=26)
 safe_bottom = intersect(safe, reachable_bottom)
 unsafe = subtract(reachable_bottom, safe)
+safe_interior = subtract(safe_bottom, external)
+x = mesh(unsafe, "unsafe.obj")
+x = mesh(safe_interior, "safe.obj")
 """
 
     def oncomplete(self):
@@ -361,11 +371,12 @@ unsafe = subtract(reachable_bottom, safe)
         import annotation_data
         d = os.path.join(tempfile.gettempdir(), self.id)
         ifc = os.path.join(d, "input.ifc")
-        ifn = os.path.join(d, "26.obj")
+        ifn1 = os.path.join(d, "safe.obj")
+        ifn2 = os.path.join(d, "unsafe.obj")
         ofn1 = os.path.join(d, "buffer.bin")
         ofn2 = os.path.join(d, "data.json")
-        prepared_buffer.create(ifn, ofn1)
-        annotation_data.create(ifc, ifn, ofn2)
+        prepared_buffer.create(ofn1, ifn1, '0f0', ifn2, 'f00')
+        annotation_data.create(ifc, ifn2, ofn2)
 
     def finalize(self):
         return jsonify({"id": self.id})
