@@ -133,35 +133,40 @@ def create(*args):
                 vertices_np_total = vertices_np
                 normals_np_total = normals
             else:
+                indices_np += index_offset
+                line_indices_np += index_offset
+                index_offset += vertices_np.shape[0]
+                
                 indices_np_total = numpy.vstack((indices_np_total, indices_np))
                 line_indices_np_total = numpy.vstack((line_indices_np_total, line_indices_np))
                 vertices_np_total = numpy.vstack((vertices_np_total, vertices_np))
                 normals_np_total = numpy.vstack((normals_np_total, normals))
+                
+        print([len(offsets), indices_np.size, line_indices_np.size, vertices_np.size, normals.size, 0])
         
-        numpy.array([len(offsets), indices_np.size * 3, line_indices_np.size * 2, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
+        numpy.array([len(offsets), indices_np.size, line_indices_np.size, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
         # alignment not necessary anymore
         # numpy.array([0], dtype=numpy.int32).tofile(f)
-        numpy.array([len(offsets), indices_np.size * 3, line_indices_np.size * 2, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
+        numpy.array([len(offsets), indices_np.size, line_indices_np.size, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)        
         
-        indices_np += index_offset
-        line_indices_np += index_offset
-        index_offset += vertices_np.shape[0]
+        print("indices @", f.tell())
         
-        indices_np.tofile(f)
-        line_indices_np.tofile(f)
+        indices_np_total.tofile(f)
+        line_indices_np_total.tofile(f)
         
+        print("oid @", f.tell())
         for i, (off, voff) in enumerate(offsets):
             numpy.array([0xffff + i], dtype=numpy.int64).tofile(f)
             try:
                 next, vnext = offsets[i+1]
             except:
-                next = indices_np.size
-                vnext = vertices_np.size
+                next = indices_np_total.size
+                vnext = vertices_np_total.size
             off //= 3
             next //= 3
             
             try:
-                min_index, max_index = indices_np[off:next].min(), indices_np[off:next].max()
+                min_index, max_index = indices_np_total[off:next].min(), indices_np_total[off:next].max()
             except: min_index, max_index = -1, -1
             
             numpy.array([off, 0, next - off, 0, vnext - voff, min_index, max_index], dtype=numpy.int32).tofile(f)
@@ -169,16 +174,16 @@ def create(*args):
             numpy.array([1, (vnext - voff) // 3 * 4, clr], dtype=numpy.uint32).tofile(f)
         
         # dequantization happens in the client now for annotations
-        # (numpy.int16(vertices_np / 0.05) * 100).tofile(f)
+        # (numpy.int16(vertices_np_total / 0.05) * 100).tofile(f)
         
         # Viewer expect millimeters
-        (vertices_np * 1000.).tofile(f)
+        (vertices_np_total * 1000.).tofile(f)
         
         # Normals no longer oct encoded
         # for n in normals.reshape((-1, 3)):
         #     normalToOct(n).tofile(f)
         
-        normals.tofile(f)
+        numpy.int8(normals * 128).tofile(f)
 
 if __name__ == "__main__":
     import sys
