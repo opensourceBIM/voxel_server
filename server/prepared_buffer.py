@@ -59,11 +59,9 @@ def create(*args):
                     offsets.append([len(indices), len(vertices)])
                     line_offsets.append([len(line_indices), len(vertices)])
                     
-            indices_np = numpy.array(indices, dtype=numpy.uint32).reshape((-1, 3)) - 1 + index_offset
-            line_indices_np = numpy.array(line_indices, dtype=numpy.uint32).reshape((-1, 2)) - 1 + index_offset
+            indices_np = numpy.array(indices, dtype=numpy.uint32).reshape((-1, 3)) - 1
+            line_indices_np = numpy.array(line_indices, dtype=numpy.uint32).reshape((-1, 2)) - 1
             vertices_np = numpy.array(vertices, dtype=numpy.float32).reshape((-1, 3))
-            
-            index_offset += vertices_np.shape[0]
             
             # initialize to (0,0,1) in case we fail to calculate normals (e.g. in case of line vertices)
             normals = numpy.zeros(vertices_np.shape, dtype=numpy.float32)
@@ -126,8 +124,14 @@ def create(*args):
             # alignment not necessary anymore
             # numpy.array([0], dtype=numpy.int32).tofile(f)
             numpy.array([len(offsets), indices_np.size * 3, line_indices_np.size * 2, vertices_np.size, normals.size, 0], dtype=numpy.int32).tofile(f)
+            
+            indices_np += index_offset
+            line_indices_np += index_offset
+            index_offset += vertices_np.shape[0]
+            
             indices_np.tofile(f)
             line_indices_np.tofile(f)
+            
             for i, (off, voff) in enumerate(offsets):
                 numpy.array([0xffff + i], dtype=numpy.int64).tofile(f)
                 try:
