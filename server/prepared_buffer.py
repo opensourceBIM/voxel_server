@@ -171,7 +171,8 @@ def create(*args):
         iColors = 0
         
         for i, (off, voff, clr) in enumerate(offsets):
-            numpy.array([0xffff + i], dtype=numpy.int64).tofile(f)
+            # nb OID set to zero, assign in viewer
+            numpy.array([0], dtype=numpy.int64).tofile(f)
             try:
                 next, vnext, _ = offsets[i+1]
             except IndexError as e:
