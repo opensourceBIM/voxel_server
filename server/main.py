@@ -327,6 +327,7 @@ result = intersect(really_reachable, deadly)
 
 class evacuationroutes(voxelfile_base):
     asynch = True    
+    size = 0.1
     name = "evacuation_routes"
     args = {"mesh": True}
     command = """file = parse("input.ifc")
