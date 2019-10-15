@@ -35,11 +35,9 @@ class ColorConverter(BaseConverter):
     def to_url(values):
         return ''.join(map(lambda i: hex(i)[0:2], values))
         
-def get_voxelfile(id, num):    
-    # assert not (set(id) - set(string.ascii_letters))
-    # db = os.path.join(tempfile.gettempdir(), id, "%d.vox" % int(num))
-    # db = r"C:\Users\tkrij\Documents\IfcOpenShell\files\nibs\%d.vox" % int(num)
-    db = r"C:\Users\tkrij\Documents\AECgeeks\projects\presentations\tue-20190911\outer\%s.vox" % num
+def get_voxelfile(id, num):
+    assert not (set(id) - set(string.ascii_letters))
+    db = os.path.join(tempfile.gettempdir(), id, "%d.vox" % int(num))
     return voxel_storage.load(db)
 
 application.url_map.converters['color'] = ColorConverter
