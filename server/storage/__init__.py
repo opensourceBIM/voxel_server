@@ -5,7 +5,7 @@ import numpy
 
 class voxel_storage:
     @staticmethod
-    def load(fn):
+    def load(fn, lazy=False):
         meta = fn + ".meta" 
         fm = open(meta)
         header = fm.readline().strip()
@@ -16,13 +16,34 @@ class voxel_storage:
             chunksize = int(fm.readline().strip())
             chunks = tuple(map(lambda l: int(l.strip()), fm))
             return chunked_storage(fn, chunksize, chunks)
+        elif header == "CHUNK2":
+            # updated serialization with origin included
+            voxelsize = float(fm.readline().strip())
+            chunksize = int(fm.readline().strip())
+            strs = fm.readline().strip().split(';')
+            origin = tuple(map(float, strs))
+            strs = fm.readline().strip().split(';')
+            chunks = tuple(map(int, strs))
+            return [chunked_storage, chunked_storage_meta][lazy](fn, chunksize, chunks, origin, voxelsize)
             
             
 EXPLICIT, IMPLICIT = 1, 2
 
+class chunked_storage_meta(voxel_storage):
+    
+    def __init__(self, filename, chunksize, numchunks, origin, voxelsize):
+        self.filename, self.chunksize, self.numchunks, self.origin, self.voxelsize = \
+            filename, chunksize, numchunks, origin, voxelsize
+        self.offset = (0,0,0)
+
+
 class chunked_storage(voxel_storage):
     
-    def __init__(self, fn, chunksize, chunks):
+    def __init__(self, fn, chunksize, chunks, origin=None, voxelsize=None):
+        # populate by harmonize
+        self.offset = (0,0,0)
+        self.origin = origin
+        self.voxelsize = voxelsize
         self.chunksize = chunksize
         self.chunkdatasize = int(chunksize * chunksize * chunksize // 8)
         
@@ -33,7 +54,7 @@ class chunked_storage(voxel_storage):
             
         self.primitives = list(map(str.strip, open(fn + ".primitives")))
         
-        nx, ny, nz = self.numchunks = chunks
+        nx, ny, nz = self.numchunks = self.ownnumchunks = chunks
         s = 0
         self.avail = avail = numpy.zeros((nx, ny, nz, 2), dtype='uint64')
         
@@ -53,10 +74,15 @@ class chunked_storage(voxel_storage):
                         avail[i,j,k] = (2, prim)
                         prim += 1
                         
-        print("Chunks: %d x %d x %d = %d, size = %d" % (nx, ny, nz, nx*ny*nz, chunksize)) 
-        print ("Primitive chunks", numpy.count_nonzero(header==2), "/", nx*ny*nz)
-        print ("Non-empty chunks", numpy.count_nonzero(header==1), "/", nx*ny*nz)
-        self.shape = tuple(c * chunksize for c in chunks)
+        # print("Chunks: %d x %d x %d = %d, size = %d" % (nx, ny, nz, nx*ny*nz, chunksize)) 
+        # print ("Primitive chunks", numpy.count_nonzero(header==2), "/", nx*ny*nz)
+        # print ("Non-empty chunks", numpy.count_nonzero(header==1), "/", nx*ny*nz)
+        
+    def __getattr__(self, k):
+        if k == "shape":
+            return tuple(c * self.chunksize for c in self.numchunks)
+        elif k == "ownshape":
+            return tuple(c * self.chunksize for c in self.ownnumchunks)
 
         
     def __getitem__(self, slices):
@@ -71,8 +97,13 @@ class chunked_storage(voxel_storage):
         result_shape = list(self.shape)
         result_shape[dim:dim+1] = []
         
-        chunks = list(self.numchunks)
+        chunks = list(self.ownnumchunks)
         chunks[dim:dim+1] = []
+        
+        offset = list(self.offset)
+        offset[dim:dim+1] = []
+        di, dj = offset
+        print("offset", offset)
         
         fixed = slices[dim]
         cs = self.chunksize
@@ -86,12 +117,12 @@ class chunked_storage(voxel_storage):
         for i in range(chunks[0]):
             for j in range(chunks[1]):
             
-                img_subset = img[i*cs:(i+1)*cs,\
-                                 j*cs:(j+1)*cs]
+                img_subset = img[(i-di)*cs:(i-di+1)*cs,\
+                                 (j-dj)*cs:(j-dj+1)*cs]
                                  
                 ijk = [i, j]
                 ijk.insert(dim, fixed_chunk)
-                print(i,j, *ijk)
+                # print(i,j, *ijk)
             
                 chunk_type, chunk_offset = self.avail[tuple(ijk)]
                 chunk_offset = int(chunk_offset)
@@ -148,12 +179,31 @@ class continous_storage(voxel_storage):
             trim = tuple(slice(0,x) for x in bytes[:,:,i::8].shape) 
             q = (bits & (1 << i))[trim] != 0 
             bytes[:,:,i::8] = q 
-        print("shape", shape, "/", bytes.shape) 
+        # print("shape", shape, "/", bytes.shape) 
         nz = numpy.count_nonzero 
-        print("nonzero", nz(bits), "/", nz(bytes)) 
+        # print("nonzero", nz(bits), "/", nz(bytes)) 
         # arr = numpy.uint8(bits != 0) 
         self.arr = bytes 
         self.shape = arr.shape
         
     def __getitem__(self, slice):
         return self.arr[slice]
+        
+def attr_of_elems(a):
+    return lambda elems: [getattr(x, a) for x in elems]
+
+def harmonize(vs):
+    vs = list(vs)
+    origins = numpy.array(attr_of_elems('origin')(vs))
+    origins /= vs[0].chunksize * vs[0].voxelsize
+    origins = numpy.int64(numpy.round(origins))
+    chunkss = numpy.array(attr_of_elems('numchunks')(vs))
+    mins = numpy.amin(origins, axis=0)
+    maxs = numpy.amax(origins + chunkss, axis=0)
+    print(mins, maxs)
+    # Todo immutability
+    for v, o in zip(vs, origins):
+        v.offset = mins - o
+        v.numchunks = maxs - mins
+    return vs
+    

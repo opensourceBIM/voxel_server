@@ -5,6 +5,7 @@ import time
 import numpy
 import string
 import threading
+import functools
 import subprocess
 import tempfile
 
@@ -35,10 +36,10 @@ class ColorConverter(BaseConverter):
     def to_url(values):
         return ''.join(map(lambda i: hex(i)[0:2], values))
         
-def get_voxelfile(id, num):
+def get_voxelfile(id, num, lazy=False):
     assert not (set(id) - set(string.ascii_letters))
     db = os.path.join(tempfile.gettempdir(), id, "%d.vox" % int(num))
-    return voxel_storage.load(db)
+    return voxel_storage.load(db, lazy)
 
 application.url_map.converters['color'] = ColorConverter
 
@@ -85,7 +86,7 @@ def dispatch_or_run(asynch, *args):
     return [run_voxelfile, dispatch][asynch](*args)
 
 from visualisation import create_image, image_builder
-from storage import voxel_storage
+from storage import voxel_storage, harmonize
 
 @application.route('/2d/<id>/<num>', methods=['GET'])
 @application.route('/2d/<id>/<orientation>/<num>', methods=['GET'])
@@ -132,15 +133,30 @@ def multi_slice(id, color, orientation, offset, slices):
     cs = 0
     
     parts = slices.split('/')
-    pairs = zip(parts[0::2], parts[1::2])
+    pairs = list(zip(parts[0::2], parts[1::2]))
+    
+    ids = range(100)
+    ids_used = set(int(n) for n, _ in pairs)
+    print("ids_used", ids_used)
+    
+    def get_voxelfile_safe(*args):
+        try:
+            return get_voxelfile(*args)
+        except FileNotFoundError as e:
+            pass        
+    
+    voxs = dict(filter(lambda tup: tup[1] is not None, map(lambda i: (i, get_voxelfile_safe(id, i, i not in ids_used)), ids)))
+    print(voxs)
+    voxs_new = harmonize(voxs.values())
+    voxs = dict(zip(voxs.keys(), voxs_new))
     
     for num, clr in pairs:
         num = int(num)
         clr = ColorConverter.to_python(clr)
         
-        vox = get_voxelfile(id, num)
-        
+        vox = voxs[num]
         cs = getattr(vox, 'chunksize', -1)
+        print(type(vox))
         
         b.add(vox, "xyz".index(orientation), int(offset), clr)
         
