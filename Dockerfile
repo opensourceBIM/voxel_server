@@ -23,7 +23,7 @@ ADD voxel/*.cpp voxel/*.h voxel/*.txt* /voxels/voxel/
 ADD voxel/tests/* /voxels/voxel/tests/
 ADD voxel/tests/fixtures/* /voxels/voxel/tests/fixtures/
 WORKDIR /voxels/voxel/build
-RUN CXXFLAGS="-O3 -march=native" /IfcOpenShell/build/Linux/x86_64/build/cmake-3.4.1/build/bin/cmake .. -DIFCOPENSHELL_ROOT=/IfcOpenShell  -DCMAKE_BUILD_TYPE=Release
+RUN CXXFLAGS="-O3 -march=native" /IfcOpenShell/build/Linux/x86_64/build/cmake-3.4.3/build/bin/cmake .. -DIFCOPENSHELL_ROOT=/IfcOpenShell  -DCMAKE_BUILD_TYPE=Release
 RUN make -j
 
 # Get IFC files for tests
