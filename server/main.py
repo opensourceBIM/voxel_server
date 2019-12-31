@@ -191,8 +191,11 @@ def run_post():
             f.write(ln + "\n")
         
     dispatch(d, id)
-        
-    return render_template('run_progress.html', context_id=id)
+    
+    if request.accept_mimetypes.accept_html:
+        return render_template('run_progress.html', context_id=id)
+    else:
+        return jsonify({'id': id})
     
    
 class voxelfile_base(View):
@@ -445,14 +448,18 @@ void = dump_surfaces(reachable_below, surfaces, "surfaces")
 def get_file(check_type, id, part):
     if len(set(id) - set(string.ascii_letters)) != 0:
         abort(404)
-    if check_type not in {"safetybarriers", "evacuationroutes"}:
+    if check_type not in {"safetybarriers", "evacuationroutes", "run"}:
         abort(404)
     p = {
         "annotation": "buffer.bin",
         "metadata": "data.json"
     }.get(part)
     if p is None:
-        abort(404)
+        pfn = os.path.abspath(os.path.join(tempfile.gettempdir(), id, part))
+        if os.path.exists(pfn) and os.path.dirname(pfn) == os.path.join(tempfile.gettempdir(), id):
+            p = part
+        else:
+            abort(404)
     fn = os.path.join(tempfile.gettempdir(), id, p)
     if not os.path.exists(fn):
         abort(404)
