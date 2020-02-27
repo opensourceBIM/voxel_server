@@ -175,8 +175,9 @@ def multi_slice(id, color, orientation, offset, slices):
 def run_get():
     return render_template('run.html')
     
-@application.route('/run', methods=['POST'])
-def run_post():
+@application.route('/run', defaults={'sync':'async'}, methods=['POST'])
+@application.route('/run/<sync>', methods=['POST'])
+def run_post(sync):
     
     id = "".join(choice(string.ascii_letters) for i in range(32))
     d = os.path.join(tempfile.gettempdir(), id)
@@ -190,7 +191,7 @@ def run_post():
         for ln in request.form["voxelfile"].splitlines():
             f.write(ln + "\n")
         
-    dispatch(d, id)
+    dispatch_or_run(sync == 'async', d, id)
     
     if request.accept_mimetypes.accept_html:
         return render_template('run_progress.html', context_id=id)
