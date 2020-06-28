@@ -27,10 +27,11 @@ RUN CXXFLAGS="-O3 -march=native" /IfcOpenShell/build/Linux/x86_64/build/cmake-3.
 RUN make -j
 
 # Get IFC files for tests
-RUN wget -O duplex.zip https://portal.nibs.org/files/wl/?id=4DsTgHFQAcOXzFetxbpRCECPbbfUqpgo && \
-       unzip -j duplex.zip Duplex_A_20110907_optimized.ifc && \
-       mv Duplex_A_20110907_optimized.ifc duplex.ifc
-RUN wget -O schependom.ifc "https://github.com/openBIMstandards/DataSetSchependomlaan/raw/master/Design model IFC/IFC Schependomlaan.ifc"
+# tests involving external files are disabled
+# RUN wget -O duplex.zip https://portal.nibs.org/files/wl/?id=4DsTgHFQAcOXzFetxbpRCECPbbfUqpgo && \
+#        unzip -j duplex.zip Duplex_A_20110907_optimized.ifc && \
+#        mv Duplex_A_20110907_optimized.ifc duplex.ifc
+# RUN wget -O schependom.ifc "https://github.com/openBIMstandards/DataSetSchependomlaan/raw/master/Design model IFC/IFC Schependomlaan.ifc"
 
 RUN make test
 RUN make install
