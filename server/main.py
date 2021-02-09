@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import os
 import time
+import json
 import numpy
 import string
 import threading
@@ -43,9 +44,6 @@ def get_voxelfile(id, num, lazy=False):
 
 application.url_map.converters['color'] = ColorConverter
 
-D = {}
-lock = threading.Lock()
-
 IDENTITY = lambda *args: None
 
 def run_voxelfile(cwd, id, oncomplete=IDENTITY, args=None):
@@ -55,27 +53,18 @@ def run_voxelfile(cwd, id, oncomplete=IDENTITY, args=None):
                 yield "--%s" % kv[0]
             else:
                 yield "--%s=%s" % kv
-        
-    li = []
-    di = defaultdict(dict)
-    D[id] = {'id': id, 'lines': li, 'dict': di}
-    proc = subprocess.Popen([os.environ.get("VOXEC_EXE") or "voxec", "voxelfile.txt", "--threads=8"] + list(make_args(args or {})), cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    while True:
-        ln = proc.stderr.readline().decode('utf-8')
-        if not ln:
-            if proc.poll() is None:
-                time.sleep(0.5)
-                continue
-            else: 
-                break
-        with lock:
-            if ln.startswith('@'):
-                attrs = list(map(lambda s: s.strip(), ln.split(';')))
-                id = int(attrs[0][1:])
-                for a in attrs[1:]:
-                    k, v = map(lambda s: s.strip(), a.split(':'))
-                    di[id][k] = v
-            li.append(ln)
+
+    f = open(os.path.join(cwd, "progress"), "wb")
+    proc = subprocess.check_call([
+        os.environ.get("VOXEC_EXE") or "voxec", 
+        "-q", "--log-file", "log.json",
+        "voxelfile.txt", 
+        "--threads=8"
+    ] + list(make_args(args or {})),
+        cwd=cwd, 
+        stdout=f
+    )
+
     oncomplete()
             
 def dispatch(cwd, id, oncomplete=IDENTITY, args=None):
@@ -488,9 +477,16 @@ application.add_url_rule('/evacuationroutes/create', methods=['GET', 'POST'], vi
 
 @application.route('/progress/<id>', methods=['GET'])
 def get_progress(id):
-    with lock:
-        p = D.get(id)
-    return jsonify(p)
+    return jsonify(os.path.getsize(os.path.join(tempfile.gettempdir(), id, "progress")))
     
+@application.route('/log/<id>', methods=['GET'])
+def get_log(id):
+    lines = []
+    with open(os.path.join(tempfile.gettempdir(), id, "log.json")) as f:
+        for l in f:
+            try: lines.append(json.loads(l))
+            except Exception as e: print(e)
+    return jsonify(lines)
+
 if __name__ == "__main__":
     application.run(host='0.0.0.0')

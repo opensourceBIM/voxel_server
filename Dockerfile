@@ -7,8 +7,8 @@ WORKDIR /IfcOpenShell/nix
 RUN CXXFLAGS="-O3 -march=native" BUILD_CFG=Release python build-all.py IfcGeom
 
 # Install boost::filesystem
-WORKDIR /IfcOpenShell/build/Linux/x86_64/build/boost_1_59_0
-RUN ./b2 --stagedir=/IfcOpenShell/build/Linux/x86_64/install/boost-1.59.0 \
+WORKDIR /IfcOpenShell/build/Linux/x86_64/build/boost_1_71_0
+RUN ./b2 --stagedir=/IfcOpenShell/build/Linux/x86_64/install/boost-1.71.0 \
         --with-system --with-program_options --with-regex --with-thread \
         --with-date_time --with-iostreams --with-filesystem \
         \
