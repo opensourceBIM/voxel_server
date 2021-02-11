@@ -482,10 +482,13 @@ def get_progress(id):
 @application.route('/log/<id>', methods=['GET'])
 def get_log(id):
     lines = []
-    with open(os.path.join(tempfile.gettempdir(), id, "log.json")) as f:
-        for l in f:
-            try: lines.append(json.loads(l))
-            except Exception as e: print(e)
+    try:
+        with open(os.path.join(tempfile.gettempdir(), id, "log.json")) as f:
+            for l in f:
+                try: lines.append(json.loads(l))
+                except Exception as e: print(e)
+    except FileNotFoundError as e:
+        abort(503)
     return jsonify(lines)
 
 if __name__ == "__main__":
