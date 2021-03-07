@@ -487,7 +487,7 @@ def get_log(id):
             for l in f:
                 try: lines.append(json.loads(l))
                 except Exception as e: print(e)
-    except FileNotFoundError as e:
+    except EnvironmentError as e:
         abort(503)
     return jsonify(lines)
 
