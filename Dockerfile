@@ -6,6 +6,12 @@ RUN git clone https://github.com/IfcOpenShell/IfcOpenShell.git && cd IfcOpenShel
 WORKDIR /IfcOpenShell/nix
 RUN CXXFLAGS="-O3 -march=native" BUILD_CFG=Release python build-all.py IfcGeom
 
+# Build twice to have a larger chance of cache hits
+ADD https://api.github.com/repos/IfcOpenShell/IfcOpenShell/git/refs/heads/v0.6.0 /tmp/ifopsh_version.json
+RUN git pull
+# Build twice to have a larger chance of cache hits
+RUN BUILD_CFG=RelWithDebInfo python2 build-all.py IfcGeom
+
 # Install boost::filesystem
 WORKDIR /IfcOpenShell/build/Linux/x86_64/build/boost_1_71_0
 RUN ./b2 --stagedir=/IfcOpenShell/build/Linux/x86_64/install/boost-1.71.0 \
@@ -20,6 +26,7 @@ RUN ./b2 --stagedir=/IfcOpenShell/build/Linux/x86_64/install/boost-1.71.0 \
         stage -s NO_BZIP2=1
 
 ADD voxel/*.cpp voxel/*.h voxel/*.txt* /voxels/voxel/
+ADD voxel/3rdparty/ /voxels/voxel/3rdparty/
 ADD voxel/tests/* /voxels/voxel/tests/
 ADD voxel/tests/fixtures/* /voxels/voxel/tests/fixtures/
 WORKDIR /voxels/voxel/build

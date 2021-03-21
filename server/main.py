@@ -55,15 +55,18 @@ def run_voxelfile(cwd, id, oncomplete=IDENTITY, args=None):
                 yield "--%s=%s" % kv
 
     f = open(os.path.join(cwd, "progress"), "wb")
-    proc = subprocess.check_call([
+    rc = subprocess.call([
         os.environ.get("VOXEC_EXE") or "voxec", 
         "-q", "--log-file", "log.json",
-        "voxelfile.txt", 
-        "--threads=8"
+        "voxelfile.txt"
     ] + list(make_args(args or {})),
         cwd=cwd, 
         stdout=f
     )
+    
+    if rc != 0:
+        with open("log.json", "a") as f:
+            json.dump({"severity": "fatal", "message": "internal error"}, f)
 
     oncomplete()
             
