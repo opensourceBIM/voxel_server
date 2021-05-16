@@ -182,8 +182,20 @@ def run_post(sync):
         # normalize line endings
         for ln in request.form["voxelfile"].splitlines():
             f.write(ln + "\n")
+            
+    from multiprocessing import cpu_count    
+    whitelisted_args = {
+        'threads': (int, range(1, cpu_count() + 1)),
+        'chunk': (int, [2 ** x for x in range(3,10)])
+    }
+    
+    def accept(k, v):
+        ty, rng = whitelisted_args.get(k, (IDENTITY, set()))
+        return ty(v) in rng
         
-    dispatch_or_run(sync == 'async', d, id)
+    form_args = {k: v for k, v in request.form.items() if accept(k, v)}
+        
+    dispatch_or_run(sync == 'async', d, id, IDENTITY, form_args)
     
     if request.accept_mimetypes.accept_html:
         return render_template('run_progress.html', context_id=id)
