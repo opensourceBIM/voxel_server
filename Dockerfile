@@ -43,12 +43,14 @@ RUN make -j
 RUN make test
 RUN make install
 
-RUN apt-get update && apt-get install -y python-flask
+RUN apt-get remove -y python-pip
+RUN wget https://bootstrap.pypa.io/pip/2.7/get-pip.py -O /tmp/get-pip.py
+RUN python /tmp/get-pip.py
 
 # pip needs to install numpy first
 # https://github.com/pypa/pip/issues/6667#issuecomment-507164431
 RUN python -m pip install numpy==1.16.5
-RUN python -m pip install flask-cors Pillow==6.2.2 gunicorn==19.9.0
+RUN python -m pip install flask flask-cors Pillow==6.2.2 gunicorn==19.9.0
 
 ADD https://s3.amazonaws.com/ifcopenshell-builds/ifcopenshell-python-27u-v0.6.0-b4ce5be-linux64.zip /tmp/ifcopenshell.zip
 RUN unzip /tmp/ifcopenshell.zip -d /usr/lib/python2.7/dist-packages
