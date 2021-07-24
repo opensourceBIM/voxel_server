@@ -492,7 +492,10 @@ application.add_url_rule('/evacuationroutes/create', methods=['GET', 'POST'], vi
 
 @application.route('/progress/<id>', methods=['GET'])
 def get_progress(id):
-    return jsonify(os.path.getsize(os.path.join(tempfile.gettempdir(), id, "progress")))
+    try:
+        p = os.path.getsize(os.path.join(tempfile.gettempdir(), id, "progress"))
+    except: p = 0
+    return jsonify(p)
     
 @application.route('/log/<id>', methods=['GET'])
 def get_log(id):
