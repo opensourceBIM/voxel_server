@@ -186,7 +186,8 @@ def run_post(sync):
     from multiprocessing import cpu_count    
     whitelisted_args = {
         'threads': (int, range(1, cpu_count() + 1)),
-        'chunk': (int, [2 ** x for x in range(3,10)])
+        'chunk': (int, [2 ** x for x in range(3,10)]),
+        'size' : (float, [0.05, 0.10])
     }
     
     def accept(k, v):
